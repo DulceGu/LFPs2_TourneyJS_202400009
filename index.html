@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>TourneyJS - Analizador Léxico para Torneos</title>
+    <link rel="stylesheet" href="estilo.css">
+</head>
+<body>
+    <header>
+        <h1>TourneyJS</h1>
+        <p>Analizador Léxico para Gestión de Torneos Deportivos</p>
+    </header>
+
+    <main>
+        <section id="seccion_entrada">
+            <h2>Entrada del Torneo</h2>
+            <textarea id="caja_entrada" placeholder="Pega aquí la definición de tu torneo..." rows="20" cols="80"></textarea>
+            <button id="boton_analizar">Analizar Torneo</button>
+        </section>
+
+        <section id="seccion_resultados">
+            <h2>Resultados del Análisis</h2>
+            <div id="contenedor_salida">
+                <p>Los resultados aparecerán aquí después de analizar.</p>
+            </div>
+        </section>
+    </main>
+
+    <script src="analizador.js"></script>
+    <script src="tourneyjs.js"></script>
+    <script src="graphviz.js"></script>
+</body>
+</html>
