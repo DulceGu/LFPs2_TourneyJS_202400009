@@ -1023,17 +1023,22 @@ document.getElementById('btn-analizar').addEventListener('click', function() {
     const lexer = new Lexer(textoEntrada);
     const resultado = lexer.analizar();
 
-    // Guardar tokens globalmente para exportar
+    // Guardar tokens globalmente para exportar (solo si no hay errores)
     window.tokensGlobales = resultado.tokens;
 
-    // Mostrar tokens o errores
+    // SIEMPRE mostramos los tokens generados, incluso si hay errores
+    mostrarTokens(resultado.tokens);
+
+    // Mostramos errores si los hay
     if (resultado.errores.length > 0) {
         mostrarErrores(resultado.errores);
+        // Cambiamos a la pestaña de errores para que el usuario los vea primero
         cambiarPestana('errores');
     } else {
-        mostrarTokens(resultado.tokens);
+        // Solo si NO hay errores, generamos los reportes y habilitamos exportación
         mostrarReportes(resultado.tokens);
         document.getElementById('btn-exportar').disabled = false;
+        // Cambiamos a la pestaña de tokens por defecto
         cambiarPestana('tokens');
     }
 
