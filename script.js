@@ -130,54 +130,107 @@ class Lexer {
 
     // Analiza una cadena entre comillas dobles
     analizarCadena(inicioLinea, inicioColumna) {
-        // Registrar apertura de comilla
-        this.pilaComillas.push({ linea: inicioLinea, columna: inicioColumna });
+    // Registrar apertura de comilla
+    this.pilaComillas.push({ linea: inicioLinea, columna: inicioColumna });
 
-        this.avanzar(); // Saltar comilla de apertura
-        let valor = "";
+    this.avanzar(); // Saltar comilla de apertura
+    let valor = "";
 
-        while (this.pos < this.texto.length) {
-            let char = this.caracterActual();
-            if (char === '"') {
-                this.avanzar(); // Saltar comilla de cierre
-                // Desapilar la comilla abierta
-                this.pilaComillas.pop();
-                this.tokens.push(new Token("CADENA", valor, inicioLinea, inicioColumna));
-                return;
-            } else if (char === '\n') {
-                // Error: cadena no cerrada antes de salto de línea
-                const infoApertura = this.pilaComillas.length > 0 ? this.pilaComillas[this.pilaComillas.length - 1] : { linea: inicioLinea, columna: inicioColumna };
-                this.registrarError(
-                    "FALTA_SIMBOLO_ESPERADO",
-                    valor,
-                    "Cadena no cerrada antes de salto de línea",
-                    infoApertura.linea,
-                    infoApertura.columna
-                );
-                // Desapilar para limpiar
-                if (this.pilaComillas.length > 0) {
-                    this.pilaComillas.pop();
-                }
-                return;
-            } else {
-                valor += char;
-                this.avanzar();
-            }
-        }
-
-        // Si llegamos aquí, la cadena no se cerró
-        const infoApertura = this.pilaComillas.length > 0 ? this.pilaComillas[this.pilaComillas.length - 1] : { linea: inicioLinea, columna: inicioColumna };
-        this.registrarError(
-            "FALTA_SIMBOLO_ESPERADO",
-            valor,
-            "Cadena no cerrada",
-            infoApertura.linea,
-            infoApertura.columna
-        );
-        // Desapilar para limpiar
-        if (this.pilaComillas.length > 0) {
+    while (this.pos < this.texto.length) {
+        let char = this.caracterActual();
+        if (char === '"') {
+            this.avanzar(); // Saltar comilla de cierre
+            // Desapilar la comilla abierta
             this.pilaComillas.pop();
+
+            // 🚨 PRIMERO: Agregamos el token CADENA a la lista
+            const nuevoToken = new Token("CADENA", valor, inicioLinea, inicioColumna);
+            this.tokens.push(nuevoToken);
+
+            // 🚨 LUEGO: Validamos el formato si estamos en contexto de "resultado"
+            let contextoEsResultado = false;
+
+            // Listas de tokens que actúan como límites de contexto
+            const tokensLimiteValores = [
+                "nombre", "sede", "posicion", "minuto", "numero", "edad", "equipos",
+                "goleadores", "goleador", "partido", "equipo", "resultado",
+                "{", "}", "[", "]", ",", "TORNEO", "EQUIPOS", "ELIMINACION", 
+                "cuartos", "semifinal", "final", "vs"
+            ];
+            const tokensLimiteTipos = [
+                "DOS_PUNTOS", "COMA", "CORCHETE_IZQ", "CORCHETE_DER"
+            ];
+
+            // Buscar hacia atrás (máximo 15 tokens) si el token anterior es "resultado"
+            // ¡Ahora SÍ incluye todos los tokens anteriores, incluyendo el "resultado:" que precede a esta cadena!
+            if (this.tokens.length > 1) { // Necesitamos al menos 2 tokens: el actual y uno antes
+                for (let i = this.tokens.length - 2; i >= Math.max(0, this.tokens.length - 16); i--) {
+                    if (this.tokens[i].valor === "resultado") {
+                        contextoEsResultado = true;
+                        break;
+                    }
+                    // Si encontramos un token límite, salimos del contexto actual
+                    if (tokensLimiteValores.includes(this.tokens[i].valor) || 
+                        tokensLimiteTipos.includes(this.tokens[i].tipo)) {
+                        break;
+                    }
+                }
+            }
+
+            if (contextoEsResultado) {
+                // Validar que el valor tenga formato "X-Y"
+                const partes = valor.split('-');
+                if (partes.length !== 2 || 
+                    partes[0] === "" || 
+                    partes[1] === "" || 
+                    !/^\d+$/.test(partes[0]) || 
+                    !/^\d+$/.test(partes[1])) {
+                    // Registrar error de formato
+                    this.registrarError(
+                        "FORMATO_INCORRECTO",
+                        valor,
+                        "Resultado de partido incompleto o inválido. Debe ser 'X-Y' con números enteros.",
+                        inicioLinea,
+                        inicioColumna
+                    );
+                }
+            }
+
+            return;
+        } else if (char === '\n') {
+            // Error: cadena no cerrada antes de salto de línea
+            const infoApertura = this.pilaComillas.length > 0 ? this.pilaComillas[this.pilaComillas.length - 1] : { linea: inicioLinea, columna: inicioColumna };
+            this.registrarError(
+                "FALTA_SIMBOLO_ESPERADO",
+                valor,
+                "Cadena no cerrada antes de salto de línea",
+                infoApertura.linea,
+                infoApertura.columna
+            );
+            // Desapilar para limpiar
+            if (this.pilaComillas.length > 0) {
+                this.pilaComillas.pop();
+            }
+            return;
+        } else {
+            valor += char;
+            this.avanzar();
         }
+    }
+
+    // Si llegamos aquí, la cadena no se cerró
+    const infoApertura = this.pilaComillas.length > 0 ? this.pilaComillas[this.pilaComillas.length - 1] : { linea: inicioLinea, columna: inicioColumna };
+    this.registrarError(
+        "FALTA_SIMBOLO_ESPERADO",
+        valor,
+        "Cadena no cerrada",
+        infoApertura.linea,
+        infoApertura.columna
+    );
+    // Desapilar para limpiar
+    if (this.pilaComillas.length > 0) {
+        this.pilaComillas.pop();
+    }
     }
 
     // Analiza un número entero
